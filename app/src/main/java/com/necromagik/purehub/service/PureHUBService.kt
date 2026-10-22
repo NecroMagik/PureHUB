@@ -44,11 +44,16 @@ class PureHubUserService : IPureHubService.Stub {
 
     @Volatile
     private var isRunning = false
+
+    @Volatile
+    private var isPausedState = false
+
     private var eventThread: Thread? = null
     private var getEventProcess: Process? = null
 
     private val scheduler = Executors.newSingleThreadScheduledExecutor()
     private var longPressTask: ScheduledFuture<*>? = null
+    private var safetyResetTask: ScheduledFuture<*>? = null
 
     private val longPressThresholdMs = 420L
     private val debounceCooldownMs = 200L
@@ -70,6 +75,18 @@ class PureHubUserService : IPureHubService.Stub {
         }
     }
 
+    override fun setPaused(paused: Boolean) {
+        logToSystem("i", "[UserService] setPaused($paused)")
+        isPausedState = paused
+        if (paused) {
+            longPressTask?.cancel(false)
+            safetyResetTask?.cancel(false)
+            resetState("ServicePausedByUser")
+        }
+    }
+
+    override fun isPaused(): Boolean = isPausedState
+
     override fun startVolumeListener() {
         val pid = try { android.os.Process.myPid() } catch (_: Throwable) { -1 }
         logToSystem("i", "[UserService] startVolumeListener() запущен (PID $pid)")
@@ -85,7 +102,10 @@ class PureHubUserService : IPureHubService.Stub {
     }
 
     override fun stopVolumeListener() {
+        logToSystem("i", "[UserService] stopVolumeListener() вызван")
         isRunning = false
+        longPressTask?.cancel(false)
+        safetyResetTask?.cancel(false)
         resetState("stopVolumeListener")
         try {
             getEventProcess?.destroy()
@@ -140,6 +160,7 @@ class PureHubUserService : IPureHubService.Stub {
 
     @Synchronized
     private fun processLine(line: String) {
+        if (isPausedState) return
         if (!line.contains("EV_KEY")) return
 
         val tokens = line.trim().split(Regex("\\s+"))
@@ -167,6 +188,14 @@ class PureHubUserService : IPureHubService.Stub {
             originalVolume = AudioServiceController.getMusicVolume()
             logToSystem("d", "[Event] $currentKey НАЖАТА. Зафиксированная громкость: $originalVolume")
 
+            safetyResetTask?.cancel(false)
+            safetyResetTask = scheduler.schedule({
+                if (activeKey != null) {
+                    logToSystem("w", "[Safety] Таймаут удержания 2000мс: сброс состояния")
+                    resetState("SafetyTimeout")
+                }
+            }, 2000, TimeUnit.MILLISECONDS)
+
             longPressTask?.cancel(false)
             longPressTask = scheduler.schedule({
                 handleLongPress(currentKey)
@@ -176,6 +205,7 @@ class PureHubUserService : IPureHubService.Stub {
             if (activeKey == currentKey) {
                 val duration = now - pressStartTime
                 longPressTask?.cancel(false)
+                safetyResetTask?.cancel(false)
 
                 if (isTriggered.get()) {
                     logToSystem("d", "[Event] $currentKey ОТПУЩЕНА после long press (${duration}мс)")
@@ -188,13 +218,14 @@ class PureHubUserService : IPureHubService.Stub {
                 lastActionTime = SystemClock.uptimeMillis()
             } else if (activeKey != null) {
                 longPressTask?.cancel(false)
+                safetyResetTask?.cancel(false)
                 resetState("KeyMismatchReset")
             }
         }
     }
 
     private fun handleLongPress(key: String) {
-        if (activeKey != key || isTriggered.getAndSet(true)) return
+        if (isPausedState || activeKey != key || isTriggered.getAndSet(true)) return
 
         logToSystem("i", "[Action] Сработало долгое удержание для $key")
         try {

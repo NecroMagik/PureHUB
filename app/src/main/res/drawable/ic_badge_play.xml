@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Фирменный зеленый фон -->
+    <path
+        android:fillColor="#082A13"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#0E4A22"
+        android:pathData="M54,18 A36,36 0 1,0 54,90 A36,36 0 1,0 54,18 Z" />
+
+    <!-- Окружность с маркерами -->
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.4"
+        android:pathData="M54,20 A34,34 0 1,0 54,88 A34,34 0 1,0 54,20 Z" />
+
+    <!-- Символ Play -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M44,36 C42.2,34.9 40,36.2 40,38.3 L40,69.7 C40,71.8 42.2,73.1 44,72.0 L69.5,56.3 C71.2,55.2 71.2,52.8 69.5,51.7 Z" />
+</vector>

@@ -4,13 +4,19 @@
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SET_VOLUME_KEY_LONG_PRESS_LISTENER"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
+        android:name=".PureHubApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -32,6 +38,51 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <service
+            android:name=".service.PureHubSoundService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Фоновая служба удержания экрана и таймеров Кофеина -->
+        <service
+            android:name=".service.CaffeineService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keep screen awake timer service" />
+        </service>
+
+        <!-- Служба плитки быстрых настроек (Quick Settings Tile) -->
+        <service
+            android:name=".service.CaffeineTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_caffeine_idle"
+            android:label="Кофеин"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
+        <!-- Служба плитки глушения уведомлений -->
+        <service
+            android:name=".service.NotificationMuteTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_notification_mute"
+            android:label="Уведомления"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -42,7 +93,26 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
         </activity>
+
+        <!-- Виртуальная точка с иконкой Плеера для главного баббла OriginOS -->
+        <activity-alias
+            android:name=".MusicControlAlias"
+            android:enabled="true"
+            android:exported="false"
+            android:icon="@drawable/ic_badge_play"
+            android:targetActivity=".MainActivity" />
+
+        <!-- Виртуальная точка с иконкой Кофе для главного баббла OriginOS -->
+        <activity-alias
+            android:name=".CaffeineAlias"
+            android:enabled="true"
+            android:exported="false"
+            android:icon="@drawable/ic_badge_coffee"
+            android:targetActivity=".MainActivity" />
 
     </application>
 
