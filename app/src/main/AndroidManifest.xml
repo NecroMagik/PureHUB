@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
         android:name=".PureHubApp"
@@ -113,6 +115,42 @@
             android:exported="false"
             android:icon="@drawable/ic_badge_coffee"
             android:targetActivity=".MainActivity" />
+
+        <!-- Виджет: Многофункциональная папка -->
+        <receiver
+            android:name=".widget.PureFolderWidgetProvider"
+            android:exported="true"
+            android:label="Pure Папка">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.necromagik.purehub.widget.ACTION_LAUNCH_APP" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pure_folder_widget_info" />
+        </receiver>
+
+        <!-- Экран кастомизации папки (изолированная задача без наложения на MainActivity) -->
+        <activity
+            android:name=".widget.FolderConfigActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:label="Настройка папки"
+            android:theme="@style/Theme.PureHUB">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Всплывающее окно для папки в режиме 1x1 (строго поверх рабочего стола) -->
+        <activity
+            android:name=".widget.FolderPopupActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
     </application>
 

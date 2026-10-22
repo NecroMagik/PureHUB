@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/folder_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="2dp">
+
+    <!-- Динамическая скругленная подложка -->
+    <ImageView
+        android:id="@+id/folder_bg_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY" />
+
+    <!-- Заглушка, если приложения еще не выбраны -->
+    <TextView
+        android:id="@+id/folder_empty_hint"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="+ Настроить\nпапку"
+        android:textColor="#CC00E676"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <!-- Режим 1x1 (превью 4 иконок, тап открывает окно папки) -->
+    <ImageView
+        android:id="@+id/folder_1x1_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/folder_content_box"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="6dp">
+
+        <!-- Шапка папки с заголовком и кнопкой кастомизации -->
+        <RelativeLayout
+            android:id="@+id/folder_header_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="4dp"
+            android:paddingBottom="2dp">
+
+            <TextView
+                android:id="@+id/folder_title_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:singleLine="true"
+                android:textColor="#CCFFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <!-- Кнопка вызова экрана кастомизации прямо с рабочего стола -->
+            <TextView
+                android:id="@+id/btn_folder_settings"
+                android:layout_width="22dp"
+                android:layout_height="20dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:gravity="center"
+                android:text="⚙"
+                android:textColor="#80FFFFFF"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+        <!-- Вертикальный свайп-пейджер слайдов -->
+        <ListView
+            android:id="@+id/folder_vertical_pager"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:scrollbars="none" />
+    </LinearLayout>
+</FrameLayout>

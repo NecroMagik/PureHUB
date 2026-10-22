@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/slide_root_container"
+    android:layout_width="match_parent"
+    android:layout_height="145dp"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:weightSum="3">
+
+    <ImageView android:id="@+id/folder_slot_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
+    <ImageView android:id="@+id/folder_slot_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
+    <ImageView android:id="@+id/folder_slot_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
+</LinearLayout>
