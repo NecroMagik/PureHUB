@@ -54,6 +54,8 @@ import com.necromagik.purehub.service.ProcessManager
 import com.necromagik.purehub.service.SoundCategory
 import com.necromagik.purehub.service.SoundController
 import com.necromagik.purehub.service.TableType
+import com.necromagik.purehub.service.UpdateManager
+import com.necromagik.purehub.service.UpdateUiState
 import com.necromagik.purehub.ui.animation.bounceClick
 import com.necromagik.purehub.ui.components.PureSwitch
 import com.necromagik.purehub.ui.components.SwitchIconType
@@ -152,6 +154,8 @@ fun MainScreen(
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+        // Тихая фоновая проверка обновлений при запуске приложения
+        UpdateManager.checkForUpdates(appContext, showUserFeedback = false)
     }
 
     MainScreenContent(
@@ -239,6 +243,101 @@ fun MainScreenContent(
         }
     }
 
+    // Состояние автообновлятора
+    val updateState by UpdateManager.updateState.collectAsState()
+    var showUpdateDialog by remember { mutableStateOf(false) }
+
+    val activeReleaseInfo = when (val st = updateState) {
+        is UpdateUiState.Available -> st.info
+        is UpdateUiState.Downloading -> st.info
+        is UpdateUiState.ReadyToInstall -> st.info
+        else -> null
+    }
+
+    // Диалог скачивания и установки обновления
+    if (showUpdateDialog && activeReleaseInfo != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (updateState !is UpdateUiState.Downloading) {
+                    showUpdateDialog = false
+                }
+            },
+            title = {
+                Text(
+                    text = "Доступно обновление ${activeReleaseInfo.versionTag}",
+                    fontWeight = FontWeight.Bold,
+                    color = themeConfig.accentColor
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Текущая версия: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = activeReleaseInfo.changelog,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
+                    )
+
+                    if (updateState is UpdateUiState.Downloading) {
+                        val progress = (updateState as UpdateUiState.Downloading).progress
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { progress / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = themeConfig.accentColor,
+                            trackColor = Color.White.copy(alpha = 0.15f)
+                        )
+                        Text(
+                            text = "Скачивание APK: $progress%",
+                            fontSize = 12.sp,
+                            color = themeConfig.accentColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = updateState !is UpdateUiState.Downloading,
+                    onClick = {
+                        coroutineScope.launch {
+                            UpdateManager.downloadAndInstall(
+                                appContext,
+                                activeReleaseInfo
+                            )
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = themeConfig.accentColor,
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = if (updateState is UpdateUiState.Downloading) "Загрузка..." else "Скачать и установить",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                if (updateState !is UpdateUiState.Downloading) {
+                    TextButton(onClick = { showUpdateDialog = false }) {
+                        Text("Позже", color = Color.Gray)
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(18.dp)
+        )
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -246,27 +345,77 @@ fun MainScreenContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        // Заголовок PureHUB (Pure белый, HUB динамический)
+        // Заголовок PureHUB + значок со стрелочкой при наличии обновления
         item {
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = Color.White)) {
-                            append("Pure")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(style = SpanStyle(color = Color.White)) {
+                                append("Pure")
+                            }
+                            withStyle(style = SpanStyle(color = dynamicAccent)) {
+                                append("HUB")
+                            }
+                        },
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    // Значок со стрелочкой, сигнализирующий о новом обновлении
+                    if (activeReleaseInfo != null) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(themeConfig.accentColor.copy(alpha = 0.2f))
+                                .clickable { showUpdateDialog = true }
+                                .bounceClick(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.size(16.dp)) {
+                                val stroke = 2.2.dp.toPx()
+                                // Вертикальная линия стрелочки
+                                drawLine(
+                                    color = themeConfig.accentColor,
+                                    start = Offset(size.width * 0.5f, size.height * 0.12f),
+                                    end = Offset(size.width * 0.5f, size.height * 0.75f),
+                                    strokeWidth = stroke,
+                                    cap = StrokeCap.Round
+                                )
+                                // Наконечник стрелочки вниз
+                                val arrowHead = Path().apply {
+                                    moveTo(size.width * 0.22f, size.height * 0.50f)
+                                    lineTo(size.width * 0.5f, size.height * 0.78f)
+                                    lineTo(size.width * 0.78f, size.height * 0.50f)
+                                }
+                                drawPath(
+                                    path = arrowHead,
+                                    color = themeConfig.accentColor,
+                                    style = Stroke(width = stroke, cap = StrokeCap.Round)
+                                )
+                                // Нижняя полочка загрузки
+                                drawLine(
+                                    color = themeConfig.accentColor,
+                                    start = Offset(size.width * 0.2f, size.height * 0.94f),
+                                    end = Offset(size.width * 0.8f, size.height * 0.94f),
+                                    strokeWidth = stroke,
+                                    cap = StrokeCap.Round
+                                )
+                            }
                         }
-                        withStyle(style = SpanStyle(color = dynamicAccent)) {
-                            append("HUB")
-                        }
-                    },
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                    }
+                }
             }
         }
 
@@ -1036,6 +1185,48 @@ fun MainScreenContent(
                         }
                     }
                 }
+            }
+        }
+
+        // 7. Подвал (Footer) с текущей версией из Gradle и проверкой обновлений по тапу
+        item {
+            val isChecking = updateState is UpdateUiState.Checking
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 20.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable(enabled = !isChecking) {
+                        if (activeReleaseInfo != null) {
+                            showUpdateDialog = true
+                        } else {
+                            coroutineScope.launch {
+                                UpdateManager.checkForUpdates(
+                                    context = appContext,
+                                    showUserFeedback = true
+                                )
+                            }
+                        }
+                    }
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "PureHUB v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = when {
+                        isChecking -> "Проверка обновлений на GitHub..."
+                        activeReleaseInfo != null -> "Доступна версия ${activeReleaseInfo.versionTag} • Нажмите для установки"
+                        else -> "Нажмите для проверки обновлений"
+                    },
+                    color = if (activeReleaseInfo != null) themeConfig.accentColor else Color.Gray.copy(alpha = 0.6f),
+                    fontSize = 11.sp
+                )
             }
         }
     }

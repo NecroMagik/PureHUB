@@ -11,8 +11,8 @@ android {
             applicationId = "com.necromagik.purehub"
             minSdk = 29
             targetSdk = 35
-            versionCode = 115
-            versionName = "1.15"
+            versionCode = 116
+            versionName = "1.16"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
