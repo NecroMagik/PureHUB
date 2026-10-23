@@ -1,24 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     [НАСТРОЙКА РАЗМЕРА СЕТКИ 3x3 ВНУТРИ СЛАЙДА]
+     - Чтобы сделать всю девятку иконок ЕЩЁ МЕНЬШЕ (компактнее к центру):
+       увеличь paddingHorizontal (например, до 10dp..14dp) и paddingVertical (до 8dp..12dp).
+     - Чтобы опустить иконки чуть ниже внутри самого слайда:
+       добавь android:paddingTop="8dp" и android:paddingBottom="4dp".
+     ========================================================================= -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/slide_root_container"
     android:layout_width="match_parent"
-    android:layout_height="145dp"
+    android:layout_height="140dp"
+    android:gravity="center"
     android:orientation="vertical"
+    android:paddingHorizontal="6dp"
+    android:paddingVertical="6dp"
     android:weightSum="3">
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:weightSum="3">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="3">
         <ImageView android:id="@+id/folder_slot_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:weightSum="3">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="3">
         <ImageView android:id="@+id/folder_slot_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:weightSum="3">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="3">
         <ImageView android:id="@+id/folder_slot_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
         <ImageView android:id="@+id/folder_slot_9" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />

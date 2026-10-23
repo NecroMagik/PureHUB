@@ -2,24 +2,24 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/slide_root_container"
     android:layout_width="match_parent"
-    android:layout_height="145dp"
+    android:layout_height="match_parent"
+    android:gravity="center"
     android:orientation="horizontal"
     android:weightSum="3">
 
-    <!-- Главная огромная иконка слева (занимает 2/3 ширины) -->
     <ImageView
         android:id="@+id/folder_slot_1"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1.8"
-        android:padding="10dp"
+        android:layout_weight="1.65"
+        android:padding="4dp"
         android:scaleType="fitCenter" />
 
-    <!-- Столбец из 2x2 иконок справа -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1.2"
+        android:layout_weight="1.35"
+        android:gravity="center"
         android:orientation="vertical"
         android:weightSum="2">
 

@@ -18,7 +18,8 @@ data class FolderConfig(
     val bgAlpha: Int = 200,          // 0..255
     val bgColorHex: Int = 0x1E1E1E,  // Цвет фона без альфы
     val cornerRadiusDp: Int = 26,    // Радиус углов папки
-    val iconPaddingDp: Int = 6       // Внутренний отступ иконок (масштаб)
+    val iconPaddingDp: Int = 4,      // Минимальный отступ для крупных иконок
+    val currentPage: Int = 0         // Индекс текущей открытой вкладки
 )
 
 object FolderWidgetPrefs {
@@ -34,6 +35,7 @@ object FolderWidgetPrefs {
             putInt("color_$widgetId", config.bgColorHex)
             putInt("radius_$widgetId", config.cornerRadiusDp)
             putInt("padding_$widgetId", config.iconPaddingDp)
+            putInt("page_$widgetId", config.currentPage)
             apply()
         }
     }
@@ -53,8 +55,16 @@ object FolderWidgetPrefs {
             bgAlpha = prefs.getInt("alpha_$widgetId", 200),
             bgColorHex = prefs.getInt("color_$widgetId", 0x1E1E1E),
             cornerRadiusDp = prefs.getInt("radius_$widgetId", 26),
-            iconPaddingDp = prefs.getInt("padding_$widgetId", 6)
+            iconPaddingDp = prefs.getInt("padding_$widgetId", 4),
+            currentPage = prefs.getInt("page_$widgetId", 0)
         )
+    }
+
+    fun setPage(context: Context, widgetId: Int, page: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("page_$widgetId", page)
+            .apply()
     }
 
     fun deleteConfig(context: Context, widgetId: Int) {
@@ -67,6 +77,7 @@ object FolderWidgetPrefs {
             remove("color_$widgetId")
             remove("radius_$widgetId")
             remove("padding_$widgetId")
+            remove("page_$widgetId")
             apply()
         }
     }

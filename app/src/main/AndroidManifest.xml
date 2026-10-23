@@ -124,17 +124,20 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.necromagik.purehub.widget.ACTION_LAUNCH_APP" />
+                <action android:name="com.necromagik.purehub.widget.ACTION_NEXT_PAGE" />
+                <action android:name="com.necromagik.purehub.widget.ACTION_PREV_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/pure_folder_widget_info" />
         </receiver>
 
-        <!-- Экран кастомизации папки (изолированная задача без наложения на MainActivity) -->
+        <!-- Экран кастомизации папки -->
         <activity
             android:name=".widget.FolderConfigActivity"
             android:exported="true"
             android:taskAffinity=""
+            android:launchMode="singleInstance"
             android:excludeFromRecents="true"
             android:label="Настройка папки"
             android:theme="@style/Theme.PureHUB">
@@ -148,8 +151,8 @@
             android:name=".widget.FolderPopupActivity"
             android:exported="false"
             android:taskAffinity=""
-            android:excludeFromRecents="true"
             android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
     </application>

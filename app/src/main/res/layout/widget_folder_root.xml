@@ -5,14 +5,14 @@
     android:layout_height="match_parent"
     android:padding="2dp">
 
-    <!-- Динамическая скругленная подложка -->
+    <!-- 1. Подложка папки -->
     <ImageView
         android:id="@+id/folder_bg_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY" />
 
-    <!-- Заглушка, если приложения еще не выбраны -->
+    <!-- 2. Заглушка для пустой папки -->
     <TextView
         android:id="@+id/folder_empty_hint"
         android:layout_width="match_parent"
@@ -21,65 +21,83 @@
         android:padding="8dp"
         android:text="+ Настроить\nпапку"
         android:textColor="#CC00E676"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
-    <!-- Режим 1x1 (превью 4 иконок, тап открывает окно папки) -->
+    <!-- 3. Режим 1x1 -->
     <ImageView
         android:id="@+id/folder_1x1_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
+        android:padding="6dp"
         android:scaleType="fitCenter"
         android:visibility="gone" />
 
+    <!-- =========================================================================
+         [НАСТРОЙКА ПОЛЕЙ ПАПКИ]
+         - paddingTop: двигает всю сетку иконок ВНИЗ от верхнего края рамки (сейчас 12dp)
+         - paddingHorizontal: сжимает сетку с боков, делая её аккуратнее и меньше (сейчас 12dp)
+         - paddingBottom: отступ от нижнего края рамки до бара с точками (сейчас 6dp)
+         ========================================================================= -->
     <LinearLayout
         android:id="@+id/folder_content_box"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:gravity="center"
         android:orientation="vertical"
-        android:padding="6dp">
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp">
 
-        <!-- Шапка папки с заголовком и кнопкой кастомизации -->
-        <RelativeLayout
-            android:id="@+id/folder_header_bar"
+        <TextView
+            android:id="@+id/folder_title_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="4dp"
-            android:paddingBottom="2dp">
+            android:gravity="center"
+            android:paddingBottom="4dp"
+            android:singleLine="true"
+            android:textColor="#E6FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/folder_title_text"
+        <!-- Линейная прокрутка слайдов -->
+        <ListView
+            android:id="@+id/folder_linear_pager"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="true"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:overScrollMode="never"
+            android:scrollbars="none" />
+
+        <!-- Нижняя панель: капсула точек + шестеренка -->
+        <RelativeLayout
+            android:id="@+id/folder_bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:layout_marginTop="4dp">
+
+            <ImageView
+                android:id="@+id/slide_dots_indicator"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="9dp"
                 android:layout_centerInParent="true"
-                android:singleLine="true"
-                android:textColor="#CCFFFFFF"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:scaleType="fitCenter" />
 
-            <!-- Кнопка вызова экрана кастомизации прямо с рабочего стола -->
             <TextView
                 android:id="@+id/btn_folder_settings"
-                android:layout_width="22dp"
-                android:layout_height="20dp"
+                android:layout_width="36dp"
+                android:layout_height="match_parent"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:gravity="center"
                 android:text="⚙"
-                android:textColor="#80FFFFFF"
+                android:textColor="#99FFFFFF"
                 android:textSize="12sp" />
         </RelativeLayout>
-
-        <!-- Вертикальный свайп-пейджер слайдов -->
-        <ListView
-            android:id="@+id/folder_vertical_pager"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:divider="@null"
-            android:dividerHeight="0dp"
-            android:scrollbars="none" />
     </LinearLayout>
 </FrameLayout>
