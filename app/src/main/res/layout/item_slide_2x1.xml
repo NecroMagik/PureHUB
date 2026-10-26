@@ -5,9 +5,27 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="horizontal"
+    android:padding="4dp"
     android:weightSum="3">
 
-    <ImageView android:id="@+id/folder_slot_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
-    <ImageView android:id="@+id/folder_slot_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
-    <ImageView android:id="@+id/folder_slot_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:scaleType="fitCenter" />
+    <ImageView
+        android:id="@+id/folder_slot_1"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/folder_slot_2"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/folder_slot_3"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
 </LinearLayout>

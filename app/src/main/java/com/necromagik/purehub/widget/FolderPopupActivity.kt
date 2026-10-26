@@ -157,7 +157,7 @@ class FolderPopupActivity : ComponentActivity() {
                                     finish()
                                 }
                             ) {
-                                Text("⚙ Изменить", color = themeConfig.accentColor, fontSize = 12.sp)
+                                Text("⚙\uFE0F Изменить", color = themeConfig.accentColor, fontSize = 12.sp)
                             }
                         }
 

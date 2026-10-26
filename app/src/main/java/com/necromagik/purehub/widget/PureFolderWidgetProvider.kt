@@ -20,22 +20,32 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_LAUNCH_APP = "com.necromagik.purehub.widget.ACTION_LAUNCH_APP"
+        const val ACTION_NEXT_PAGE = "com.necromagik.purehub.widget.ACTION_NEXT_PAGE"
+        const val ACTION_PREV_PAGE = "com.necromagik.purehub.widget.ACTION_PREV_PAGE"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_WIDGET_ID = "extra_widget_id"
 
         // =========================================================================
-        // БЛОК ТОНКОЙ КАЛИБРОВКИ СЕТКИ И ВЫСОТЫ СЛАЙДА (ДЛЯ ПАПКИ 2x2 И 2x1):
+        // ТОЧНАЯ КАЛИБРОВКА ВЫСОТЫ СЛАЙДОВ И ОТСТУПА НИЖНЕЙ ГРАНИЦЫ ВКЛАДКИ:
         //
-        // 1. SLIDE_HEIGHT_CORRECTION_DP:
-        //    Отвечает за то, чтобы снизу НЕ ТОРЧАЛА вторая девятка приложений!
-        //    - Если снизу всё ещё видна верхушка второго слайда -> УВЕЛИЧЬ это число (например, +12, +18, +24).
-        //    - Если первый слайд обрезается снизу -> УМЕНЬШИ это число (например, 0 или -8).
-        private const val SLIDE_HEIGHT_CORRECTION_DP = 14
+        // 1. Высота одного слайда (в dp):
+        //    Синхронизирована между 1x2 и 2x2 (150 dp), чтобы ряды стояли на одном уровне!
+        //    - Если в 1x2 снизу вдруг покажется край 4-й иконки -> чуть увеличь MIN_SLIDE_HEIGHT_1X2_DP (например, 156..162).
+        private const val MIN_SLIDE_HEIGHT_1X2_DP = 200
+        private const val MIN_SLIDE_HEIGHT_2X2_DP = 150 // Твоя идеальная настройка для 2x2
+        private const val MIN_SLIDE_HEIGHT_2X1_DP = 64
 
-        // 2. EXTRA_ICON_SHRINK_DP:
-        //    Дополнительное уменьшение иконок внутри ячеек сетки (плюсуется к ползунку "Отступ иконок" в настройках).
-        //    - Увеличь (например, до 4..8), чтобы сделать сами иконки в сетке 3x3 меньше и воздушнее.
-        private const val EXTRA_ICON_SHRINK_DP = 3
+        // 2. ОТСТУП НИЖНЕЙ И ВЕРХНЕЙ ГРАНИЦЫ ВКЛАДКИ (специально для вертикальной папки 1x2):
+        //    - SLIDE_1X2_BOTTOM_PADDING_DP: поджимает нижнюю границу слайда 1x2 снизу вверх
+        //      (увеличь до 10..16, чтобы поднять нижнюю иконку выше от бара с точками и сблизить тройку иконок).
+        //    - SLIDE_1X2_TOP_PADDING_DP: опускает верхнюю границу слайда 1x2 сверху вниз.
+        private const val SLIDE_1X2_TOP_PADDING_DP = 4
+        private const val SLIDE_1X2_BOTTOM_PADDING_DP = 10
+
+        // 3. Баланс внутренних отступов самих иконок (0 = максимальный размер иконки без сжатия):
+        private const val EXTRA_PAD_2X2_DP = 0   // Твоя настройка для 2x2
+        private const val EXTRA_PAD_1X2_DP = 0  // Убирает базовый ползунок до 0dp, делая иконки в 1x2 крупными!
+        private const val EXTRA_PAD_2X1_DP = 2
         // =========================================================================
 
         fun updateAllWidgets(context: Context) {
@@ -50,7 +60,6 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
             val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-            // В портретном режиме реальная высота виджета лежит в OPTION_APPWIDGET_MAX_HEIGHT!
             val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight)
 
             val cols = if (minWidth >= 115) 2 else 1
@@ -59,7 +68,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val config = FolderWidgetPrefs.loadConfig(context, appWidgetId)
             val rootViews = RemoteViews(context.packageName, R.layout.widget_folder_root)
 
-            // 1. Отрисовка кастомной подложки по реальным пропорциям
+            // 1. Отрисовка кастомной подложки
             val actualHeightDp = maxHeight.coerceAtLeast(minHeight)
             val widthPx = dpToPx(context, minWidth.coerceAtLeast(60))
             val heightPx = dpToPx(context, actualHeightDp.coerceAtLeast(60))
@@ -67,7 +76,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val bgBitmap = createRoundedBgBitmap(widthPx, heightPx, radiusPx, config.bgColorHex, config.bgAlpha)
             rootViews.setImageViewBitmap(R.id.folder_bg_image, bgBitmap)
 
-            // 2. PendingIntent для открытия всплывающей папки (перехватывает клики мимо иконок и по капсуле)
+            // 2. PendingIntent для открытия всплывающей папки
             val popupIntent = Intent(context, FolderPopupActivity::class.java).apply {
                 data = Uri.parse("purehub://folder_popup/$appWidgetId")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -80,7 +89,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // PendingIntent для шестеренки (открывает настройки папки)
+            // PendingIntent для шестеренки
             val configIntent = Intent(context, FolderConfigActivity::class.java).apply {
                 action = AppWidgetManager.ACTION_APPWIDGET_CONFIGURE
                 data = Uri.parse("purehub://folder_config/$appWidgetId")
@@ -96,12 +105,10 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
 
             rootViews.setOnClickPendingIntent(R.id.folder_root, popupPi)
             rootViews.setOnClickPendingIntent(R.id.folder_bg_image, popupPi)
-            rootViews.setOnClickPendingIntent(R.id.folder_bottom_bar, popupPi)
-            rootViews.setOnClickPendingIntent(R.id.slide_dots_indicator, popupPi)
             rootViews.setOnClickPendingIntent(R.id.folder_title_text, popupPi)
             rootViews.setOnClickPendingIntent(R.id.btn_folder_settings, configPi)
 
-            // 3. Если папка пустая — показываем "+ Настроить папку"
+            // 3. Если папка пустая
             if (config.packages.isEmpty()) {
                 rootViews.setViewVisibility(R.id.folder_empty_hint, View.VISIBLE)
                 rootViews.setViewVisibility(R.id.folder_1x1_preview, View.GONE)
@@ -126,7 +133,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 return
             }
 
-            // 5. Режимы 2x1, 1x2 и 2x2 с линейным вертикальным свайпом слайдов
+            // 5. Режимы 2x1, 1x2 и 2x2
             rootViews.setViewVisibility(R.id.folder_1x1_preview, View.GONE)
             rootViews.setViewVisibility(R.id.folder_content_box, View.VISIBLE)
 
@@ -140,21 +147,25 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
 
             val itemsPerPage = when {
                 cols == 2 && rows == 2 -> config.style2x2.itemsPerPage
-                else -> 3
+                else -> 3 // В 1x2 и 2x1 всегда ровно по 3 иконки на вкладку
             }
 
-            val pages = config.packages.chunked(itemsPerPage)
-            val totalPages = pages.size.coerceAtLeast(1)
+            val rawPages = config.packages.chunked(itemsPerPage)
+            val totalPages = rawPages.size.coerceAtLeast(1)
+            val safePage = config.currentPage.coerceIn(0, totalPages - 1)
 
-            // =========================================================================
-            // РАСЧЕТ ТОЧНОЙ ВЫСОТЫ ОДНОГО СЛАЙДА:
-            // Берем реальную портретную высоту actualHeightDp (MAX_HEIGHT),
-            // вычитаем высоту нижнего бара с точками + отступы (40dp) и прибавляем SLIDE_HEIGHT_CORRECTION_DP,
-            // чтобы второй слайд гарантированно ушел вниз за границу видимости!
-            // =========================================================================
-            val chromeOverheadDp = 40 + (if (hasTitle) 18 else 0)
-            val exactSlideHeightDp = (actualHeightDp - chromeOverheadDp + SLIDE_HEIGHT_CORRECTION_DP)
-                .coerceAtLeast(if (rows == 2) 138 else 58)
+            val orderedPages = if (totalPages > 1 && safePage > 0) {
+                rawPages.drop(safePage) + rawPages.take(safePage)
+            } else {
+                rawPages
+            }
+
+            val titleOverhead = if (hasTitle) 18 else 0
+            val exactSlideHeightDp = when {
+                cols == 1 && rows == 2 -> (actualHeightDp - 36 - titleOverhead).coerceAtLeast(MIN_SLIDE_HEIGHT_1X2_DP)
+                cols == 2 && rows == 2 -> (actualHeightDp - 36 - titleOverhead).coerceAtLeast(MIN_SLIDE_HEIGHT_2X2_DP)
+                else -> (actualHeightDp - 32 - titleOverhead).coerceAtLeast(MIN_SLIDE_HEIGHT_2X1_DP)
+            }
 
             val clickTemplateIntent = Intent(context, PureFolderWidgetProvider::class.java).apply {
                 action = ACTION_LAUNCH_APP
@@ -167,31 +178,64 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 clickTemplateIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )
-            rootViews.setPendingIntentTemplate(R.id.folder_linear_pager, clickTemplatePi)
+            rootViews.setPendingIntentTemplate(R.id.folder_vertical_pager, clickTemplatePi)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val collectionBuilder = RemoteViews.RemoteCollectionItems.Builder()
-                pages.forEachIndexed { pageIndex, pagePkgs ->
+                orderedPages.forEachIndexed { idx, pagePkgs ->
                     val slideView = buildSlideRemoteViews(
                         context = context,
                         cols = cols,
                         rows = rows,
                         style2x2 = config.style2x2,
                         pagePackages = pagePkgs,
-                        iconPaddingDp = config.iconPaddingDp + EXTRA_ICON_SHRINK_DP,
+                        basePaddingDp = config.iconPaddingDp,
                         slideHeightDp = exactSlideHeightDp
                     )
-                    collectionBuilder.addItem(pageIndex.toLong(), slideView)
+                    collectionBuilder.addItem(idx.toLong(), slideView)
                 }
-                rootViews.setRemoteAdapter(R.id.folder_linear_pager, collectionBuilder.build())
+                rootViews.setRemoteAdapter(R.id.folder_vertical_pager, collectionBuilder.build())
             }
 
+            // 6. Нижний индикатор точек OxygenOS
             if (totalPages > 1) {
-                rootViews.setViewVisibility(R.id.slide_dots_indicator, View.VISIBLE)
-                val dotsBmp = createOxygenDotsBitmap(totalPages, 0)
+                rootViews.setViewVisibility(R.id.folder_pager_touch_bar, View.VISIBLE)
+                val dotsBmp = createOxygenDotsBitmap(
+                    totalPages = totalPages,
+                    activeIndex = safePage,
+                    compactMode = (cols == 1)
+                )
                 rootViews.setImageViewBitmap(R.id.slide_dots_indicator, dotsBmp)
+
+                val prevIntent = Intent(context, PureFolderWidgetProvider::class.java).apply {
+                    action = ACTION_PREV_PAGE
+                    data = Uri.parse("purehub://prev_tab/$appWidgetId")
+                    putExtra(EXTRA_WIDGET_ID, appWidgetId)
+                }
+                val prevPi = PendingIntent.getBroadcast(
+                    context,
+                    appWidgetId * 10 + 1,
+                    prevIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                val nextIntent = Intent(context, PureFolderWidgetProvider::class.java).apply {
+                    action = ACTION_NEXT_PAGE
+                    data = Uri.parse("purehub://next_tab/$appWidgetId")
+                    putExtra(EXTRA_WIDGET_ID, appWidgetId)
+                }
+                val nextPi = PendingIntent.getBroadcast(
+                    context,
+                    appWidgetId * 10 + 2,
+                    nextIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                rootViews.setOnClickPendingIntent(R.id.btn_prev_tab, prevPi)
+                rootViews.setOnClickPendingIntent(R.id.slide_dots_indicator, nextPi)
+                rootViews.setOnClickPendingIntent(R.id.btn_next_tab, nextPi)
             } else {
-                rootViews.setViewVisibility(R.id.slide_dots_indicator, View.INVISIBLE)
+                rootViews.setViewVisibility(R.id.folder_pager_touch_bar, View.INVISIBLE)
             }
 
             appWidgetManager.updateAppWidget(appWidgetId, rootViews)
@@ -203,7 +247,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             rows: Int,
             style2x2: BigFolderStyle,
             pagePackages: List<String>,
-            iconPaddingDp: Int,
+            basePaddingDp: Int,
             slideHeightDp: Int
         ): RemoteViews {
             val layoutId = when {
@@ -227,13 +271,36 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 )
             }
 
+            // Применяем точечный отступ верхней и нижней границы вкладки для 1x2
+            if (cols == 1 && rows == 2) {
+                slideViews.setViewPadding(
+                    R.id.slide_root_container,
+                    0,
+                    dpToPx(context, SLIDE_1X2_TOP_PADDING_DP),
+                    0,
+                    dpToPx(context, SLIDE_1X2_BOTTOM_PADDING_DP)
+                )
+            }
+
             val slotIds = intArrayOf(
                 R.id.folder_slot_1, R.id.folder_slot_2, R.id.folder_slot_3,
                 R.id.folder_slot_4, R.id.folder_slot_5, R.id.folder_slot_6,
                 R.id.folder_slot_7, R.id.folder_slot_8, R.id.folder_slot_9
             )
 
-            val padPx = dpToPx(context, iconPaddingDp)
+            val extraPadDp = when {
+                cols == 1 && rows == 2 -> EXTRA_PAD_1X2_DP
+                cols == 2 && rows == 1 -> EXTRA_PAD_2X1_DP
+                else -> EXTRA_PAD_2X2_DP
+            }
+            // Разрешаем 0 dp отступа, чтобы иконки в 1x2 не зажимались!
+            val effectivePaddingDp = (basePaddingDp + extraPadDp).coerceIn(0, 18)
+            val padPx = dpToPx(context, effectivePaddingDp)
+
+            // Для 1x2 убрали принудительный боковой зажим (+4), который делал иконки мелкими:
+            val horizPadPx = if (cols == 1 && rows == 2) dpToPx(context, effectivePaddingDp) else padPx
+            val vertPadPx = if (cols == 1 && rows == 2) dpToPx(context, effectivePaddingDp + 1) else padPx
+
             val pm = context.packageManager
 
             for (i in slotIds.indices) {
@@ -242,8 +309,8 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                     val pkg = pagePackages[i]
                     try {
                         val icon = pm.getApplicationIcon(pkg)
-                        slideViews.setImageViewBitmap(slotId, drawableToBitmap(icon, 168))
-                        slideViews.setViewPadding(slotId, padPx, padPx, padPx, padPx)
+                        slideViews.setImageViewBitmap(slotId, drawableToBitmap(icon, 192))
+                        slideViews.setViewPadding(slotId, horizPadPx, vertPadPx, horizPadPx, vertPadPx)
                         slideViews.setViewVisibility(slotId, View.VISIBLE)
 
                         val fillInIntent = Intent().apply {
@@ -266,13 +333,20 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             return slideViews
         }
 
-        private fun createOxygenDotsBitmap(totalPages: Int, activeIndex: Int): Bitmap {
-            val dotDiameter = 14f
-            val activeWidth = 38f
-            val spacing = 12f
+        private fun createOxygenDotsBitmap(
+            totalPages: Int,
+            activeIndex: Int,
+            compactMode: Boolean = false
+        ): Bitmap {
+            val visibleDots = if (compactMode) totalPages.coerceAtMost(3) else totalPages.coerceAtMost(7)
+            val safeActive = activeIndex % visibleDots
+
+            val dotDiameter = if (compactMode) 12f else 13f
+            val activeWidth = if (compactMode) 28f else 34f
+            val spacing = if (compactMode) 8f else 10f
             val height = 20
 
-            val totalWidth = ((totalPages - 1) * dotDiameter + activeWidth + (totalPages - 1) * spacing + 8f).toInt()
+            val totalWidth = ((visibleDots - 1) * dotDiameter + activeWidth + (visibleDots - 1) * spacing + 8f).toInt()
             val bmp = Bitmap.createBitmap(totalWidth.coerceAtLeast(20), height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
 
@@ -281,7 +355,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 style = Paint.Style.FILL
             }
             val inactivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(95, 255, 255, 255)
+                color = Color.argb(115, 255, 255, 255)
                 style = Paint.Style.FILL
             }
 
@@ -289,8 +363,8 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val centerY = height / 2f
             val radius = dotDiameter / 2f
 
-            for (i in 0 until totalPages) {
-                if (i == activeIndex) {
+            for (i in 0 until visibleDots) {
+                if (i == safeActive) {
                     val rect = RectF(currentX, centerY - radius, currentX + activeWidth, centerY + radius)
                     canvas.drawRoundRect(rect, radius, radius, activePaint)
                     currentX += activeWidth + spacing
@@ -382,23 +456,43 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_LAUNCH_APP) {
-            val pkg = intent.getStringExtra(EXTRA_PACKAGE_NAME)
-            val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        when (intent.action) {
+            ACTION_LAUNCH_APP -> {
+                val pkg = intent.getStringExtra(EXTRA_PACKAGE_NAME)
+                val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
-            if (!pkg.isNullOrBlank()) {
-                val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (!pkg.isNullOrBlank()) {
+                    val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    if (launchIntent != null) {
+                        context.startActivity(launchIntent)
+                    }
+                } else if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    val popupIntent = Intent(context, FolderPopupActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra(EXTRA_WIDGET_ID, widgetId)
+                    }
+                    context.startActivity(popupIntent)
                 }
-                if (launchIntent != null) {
-                    context.startActivity(launchIntent)
-                }
-            } else if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                val popupIntent = Intent(context, FolderPopupActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(EXTRA_WIDGET_ID, widgetId)
-                }
-                context.startActivity(popupIntent)
+            }
+            ACTION_NEXT_PAGE, ACTION_PREV_PAGE -> {
+                val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+                if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                val cols = if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110) >= 115) 2 else 1
+                val rows = if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110) >= 115) 2 else 1
+
+                val config = FolderWidgetPrefs.loadConfig(context, widgetId)
+                val itemsPerPage = if (cols == 2 && rows == 2) config.style2x2.itemsPerPage else 3
+                val totalPages = ((config.packages.size + itemsPerPage - 1) / itemsPerPage).coerceAtLeast(1)
+
+                val delta = if (intent.action == ACTION_NEXT_PAGE) 1 else -1
+                val nextPage = (config.currentPage + delta + totalPages) % totalPages
+                FolderWidgetPrefs.setPage(context, widgetId, nextPage)
+                updateWidget(context, appWidgetManager, widgetId)
             }
         }
     }

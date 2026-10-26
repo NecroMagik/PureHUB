@@ -1,13 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     ВЕРТИКАЛЬНАЯ ПАПКА 1x2:
+     - paddingHorizontal="0dp": иконки теперь крупные во всю ширину пенала!
+     - Нижний отступ вкладки регулируется прямо из PureFolderWidgetProvider.kt
+       константой SLIDE_1X2_BOTTOM_PADDING_DP (или здесь через paddingBottom).
+     ========================================================================= -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/slide_root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
+    android:paddingHorizontal="0dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="8dp"
     android:weightSum="3">
 
-    <ImageView android:id="@+id/folder_slot_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
-    <ImageView android:id="@+id/folder_slot_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
-    <ImageView android:id="@+id/folder_slot_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitCenter" />
+    <ImageView
+        android:id="@+id/folder_slot_1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/folder_slot_2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/folder_slot_3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="fitCenter" />
 </LinearLayout>

@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- =========================================================================
-     [НАСТРОЙКА РАЗМЕРА СЕТКИ 3x3 ВНУТРИ СЛАЙДА]
-     - Чтобы сделать всю девятку иконок ЕЩЁ МЕНЬШЕ (компактнее к центру):
-       увеличь paddingHorizontal (например, до 10dp..14dp) и paddingVertical (до 8dp..12dp).
-     - Чтобы опустить иконки чуть ниже внутри самого слайда:
-       добавь android:paddingTop="8dp" и android:paddingBottom="4dp".
-     ========================================================================= -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/slide_root_container"
     android:layout_width="match_parent"
-    android:layout_height="140dp"
+    android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    android:paddingHorizontal="6dp"
-    android:paddingVertical="6dp"
+    android:padding="4dp"
     android:weightSum="3">
 
     <LinearLayout

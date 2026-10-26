@@ -34,37 +34,32 @@
         android:scaleType="fitCenter"
         android:visibility="gone" />
 
-    <!-- =========================================================================
-         [НАСТРОЙКА ПОЛЕЙ ПАПКИ]
-         - paddingTop: двигает всю сетку иконок ВНИЗ от верхнего края рамки (сейчас 12dp)
-         - paddingHorizontal: сжимает сетку с боков, делая её аккуратнее и меньше (сейчас 12dp)
-         - paddingBottom: отступ от нижнего края рамки до бара с точками (сейчас 6dp)
-         ========================================================================= -->
+    <!-- 4. Основной контейнер со свайпом вверх/вниз -->
     <LinearLayout
         android:id="@+id/folder_content_box"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="10dp">
+        android:paddingHorizontal="8dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/folder_title_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingBottom="4dp"
+            android:paddingBottom="2dp"
             android:singleLine="true"
             android:textColor="#E6FFFFFF"
             android:textSize="11sp"
             android:textStyle="bold"
             android:visibility="gone" />
 
-        <!-- Линейная прокрутка слайдов -->
+        <!-- Свайп-контейнер вверх/вниз -->
         <ListView
-            android:id="@+id/folder_linear_pager"
+            android:id="@+id/folder_vertical_pager"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -74,30 +69,52 @@
             android:overScrollMode="never"
             android:scrollbars="none" />
 
-        <!-- Нижняя панель: капсула точек + шестеренка -->
+        <!-- Нижняя панель: поднята выше от края (paddingBottom="8dp" у родителя + height="22dp"),
+             чтобы в 1x2 и 2x2 точки и шестеренка были четко видны -->
         <RelativeLayout
             android:id="@+id/folder_bottom_bar"
             android:layout_width="match_parent"
-            android:layout_height="18dp"
-            android:layout_marginTop="4dp">
+            android:layout_height="22dp"
+            android:layout_marginTop="4dp"
+            android:paddingHorizontal="2dp">
 
-            <ImageView
-                android:id="@+id/slide_dots_indicator"
-                android:layout_width="wrap_content"
-                android:layout_height="9dp"
-                android:layout_centerInParent="true"
-                android:scaleType="fitCenter" />
+            <LinearLayout
+                android:id="@+id/folder_pager_touch_bar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_toStartOf="@id/btn_folder_settings"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/btn_prev_tab"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/slide_dots_indicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="10dp"
+                    android:scaleType="fitCenter" />
+
+                <ImageView
+                    android:id="@+id/btn_next_tab"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/btn_folder_settings"
-                android:layout_width="36dp"
+                android:layout_width="22dp"
                 android:layout_height="match_parent"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:gravity="center"
-                android:text="⚙"
-                android:textColor="#99FFFFFF"
-                android:textSize="12sp" />
+                android:text="⚙️"
+                android:textColor="#B3FFFFFF"
+                android:textSize="13sp" />
         </RelativeLayout>
     </LinearLayout>
 </FrameLayout>
