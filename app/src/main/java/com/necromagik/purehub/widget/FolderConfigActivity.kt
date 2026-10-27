@@ -8,12 +8,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -28,32 +26,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.necromagik.purehub.ui.components.PureSwitch
-import com.necromagik.purehub.ui.theme.LocalPureHubConfig
 import com.necromagik.purehub.ui.theme.PureHUBTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
 import java.util.Locale
-import kotlin.math.hypot
 
 data class InstalledAppItem(
     val packageName: String,
@@ -100,9 +86,6 @@ class FolderConfigActivity : ComponentActivity() {
     }
 }
 
-/**
- * Компаратор сортировки: сначала кириллица (А-Я), затем латиница (A-Z), затем прочие символы
- */
 private fun compareAppLabelsCyrillicFirst(a: String, b: String): Int {
     val cleanA = a.trim()
     val cleanB = b.trim()
@@ -110,9 +93,9 @@ private fun compareAppLabelsCyrillicFirst(a: String, b: String): Int {
     val firstB = cleanB.firstOrNull()?.uppercaseChar() ?: ' '
 
     fun charGroup(c: Char): Int = when {
-        c in 'А'..'Я' || c == 'Ё' -> 0 // Кириллица первой
-        c in 'A'..'Z' -> 1             // Латиница второй
-        else -> 2                      // Цифры и символы
+        c in 'А'..'Я' || c == 'Ё' -> 0
+        c in 'A'..'Z' -> 1
+        else -> 2
     }
 
     val groupA = charGroup(firstA)
@@ -126,14 +109,13 @@ private fun compareAppLabelsCyrillicFirst(a: String, b: String): Int {
     return collator.compare(cleanA, cleanB)
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FolderConfigScreen(
     initialConfig: FolderConfig,
     onSave: (FolderConfig) -> Unit
 ) {
     val context = LocalContext.current
-    val themeConfig = LocalPureHubConfig.current
 
     var title by remember { mutableStateOf(initialConfig.title) }
     var showTitle by remember { mutableStateOf(initialConfig.showTitle) }
@@ -144,7 +126,27 @@ fun FolderConfigScreen(
     var cornerRadiusDp by remember { mutableFloatStateOf(initialConfig.cornerRadiusDp.toFloat()) }
     var iconPaddingDp by remember { mutableFloatStateOf(initialConfig.iconPaddingDp.toFloat()) }
 
+    // Новые системные настройки кастомизации
+    var useSystemMonet by remember { mutableStateOf(initialConfig.useSystemMonet) }
+    var accentColorHex by remember { mutableIntStateOf(initialConfig.accentColorHex) }
+    var borderAlpha by remember { mutableFloatStateOf(initialConfig.borderAlpha.toFloat()) }
+    var showPopupLabels by remember { mutableStateOf(initialConfig.showPopupLabels) }
+    var popupHorizontalSwipe by remember { mutableStateOf(initialConfig.popupHorizontalSwipe) }
+
     var showAppPickerSheet by remember { mutableStateOf(false) }
+
+    val previewConfig = remember(
+        useSystemMonet, bgColorHex, accentColorHex
+    ) {
+        initialConfig.copy(
+            useSystemMonet = useSystemMonet,
+            bgColorHex = bgColorHex,
+            accentColorHex = accentColorHex
+        )
+    }
+    val effectiveBgHex = FolderWidgetPrefs.resolveBgColorHex(context, previewConfig)
+    val effectiveAccentHex = FolderWidgetPrefs.resolveAccentColorHex(context, previewConfig)
+    val activeAccentColor = Color(0xFF000000 or effectiveAccentHex.toLong())
 
     val allApps by produceState(initialValue = emptyList<InstalledAppItem>()) {
         value = withContext(Dispatchers.IO) {
@@ -177,14 +179,24 @@ fun FolderConfigScreen(
         0x000000 to "Черный OLED",
         0x0D291E to "Изумруд",
         0x1A233A to "Полночь",
-        0x2D1B2E to "Аметист"
+        0x2D1B2E to "Аметист",
+        0x2B2318 to "Янтарь"
+    )
+
+    val accentPresets = listOf(
+        0x00E676 to "Pure Зеленый",
+        0x448AFF to "Origin Синий",
+        0xFF5252 to "OnePlus Красный",
+        0xFFD740 to "Золотой",
+        0xE040FB to "Неон",
+        0xFFFFFF to "Белый"
     )
 
     if (showAppPickerSheet) {
         AppPickerBottomSheet(
             allApps = allApps,
             selectedPackages = selectedPackages,
-            accentColor = themeConfig.accentColor,
+            accentColor = activeAccentColor,
             onToggleApp = { pkg ->
                 selectedPackages = if (selectedPackages.contains(pkg)) {
                     selectedPackages - pkg
@@ -214,7 +226,12 @@ fun FolderConfigScreen(
                                 bgAlpha = bgAlpha.toInt(),
                                 bgColorHex = bgColorHex,
                                 cornerRadiusDp = cornerRadiusDp.toInt(),
-                                iconPaddingDp = iconPaddingDp.toInt()
+                                iconPaddingDp = iconPaddingDp.toInt(),
+                                useSystemMonet = useSystemMonet,
+                                accentColorHex = accentColorHex,
+                                borderAlpha = borderAlpha.toInt(),
+                                showPopupLabels = showPopupLabels,
+                                popupHorizontalSwipe = popupHorizontalSwipe
                             )
                         )
                     },
@@ -223,7 +240,7 @@ fun FolderConfigScreen(
                         .navigationBarsPadding()
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = themeConfig.accentColor,
+                        containerColor = activeAccentColor,
                         contentColor = Color.Black
                     ),
                     shape = RoundedCornerShape(16.dp)
@@ -250,11 +267,11 @@ fun FolderConfigScreen(
                     text = "Кастомизация папки",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = themeConfig.accentColor
+                    color = activeAccentColor
                 )
             }
 
-            // 1. Интерактивный макет папки с сортировкой перетаскиванием + кнопка добавления
+            // 1. Интерактивный макет папки с сортировкой внутри и МЕЖДУ вкладками
             item {
                 Column(
                     modifier = Modifier
@@ -272,24 +289,24 @@ fun FolderConfigScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Макет папки",
+                                text = "Макет и сортировка вкладок",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 15.sp
                             )
                             Text(
-                                text = "Зажмите иконку для перетаскивания • ✕ удалить",
+                                text = "Тяните иконку к краю окна для переноса на другую вкладку",
                                 color = Color.Gray,
                                 fontSize = 11.sp
                             )
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = themeConfig.accentColor.copy(alpha = 0.15f)
+                            color = activeAccentColor.copy(alpha = 0.15f)
                         ) {
                             Text(
                                 text = "${selectedPackages.size} шт.",
-                                color = themeConfig.accentColor,
+                                color = activeAccentColor,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -297,37 +314,74 @@ fun FolderConfigScreen(
                         }
                     }
 
-                    // Визуальный контейнер самой папки
-                    FolderMockupReorderGrid(
-                        selectedApps = selectedAppItems,
-                        itemsPerPage = style2x2.itemsPerPage,
-                        title = title,
-                        showTitle = showTitle,
-                        bgColorHex = bgColorHex,
-                        bgAlpha = bgAlpha.toInt(),
-                        cornerRadiusDp = cornerRadiusDp.toInt(),
-                        accentColor = themeConfig.accentColor,
-                        onMove = { fromIndex, toIndex ->
-                            if (fromIndex in selectedPackages.indices && toIndex in selectedPackages.indices && fromIndex != toIndex) {
-                                val mutable = selectedPackages.toMutableList()
-                                val item = mutable.removeAt(fromIndex)
-                                mutable.add(toIndex, item)
-                                selectedPackages = mutable
-                            }
-                        },
-                        onRemove = { pkg ->
-                            selectedPackages = selectedPackages - pkg
-                        },
-                        onEmptyClick = { showAppPickerSheet = true }
+                    val folderShape = RoundedCornerShape(cornerRadiusDp.dp)
+                    val folderBgColor = Color(0xFF000000 or effectiveBgHex.toLong()).copy(
+                        alpha = (bgAlpha / 255f).coerceIn(0.25f, 0.98f)
                     )
 
-                    // Кнопка вызова списка всех приложений
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(folderShape)
+                            .background(folderBgColor)
+                            .border(
+                                width = 1.2.dp,
+                                color = Color.White.copy(alpha = (borderAlpha / 255f).coerceIn(0f, 1f)),
+                                shape = folderShape
+                            )
+                            .padding(14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selectedAppItems.isEmpty()) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showAppPickerSheet = true }
+                                    .padding(vertical = 36.dp)
+                            ) {
+                                Text(
+                                    text = "Папка пуста",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Нажмите «+ Добавить приложения» ниже",
+                                    color = activeAccentColor,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        } else {
+                            FolderInteractivePagerGrid(
+                                apps = selectedAppItems,
+                                itemsPerPage = style2x2.itemsPerPage,
+                                isHorizontalSwipe = popupHorizontalSwipe,
+                                showLabels = showPopupLabels,
+                                showEditBadges = true,
+                                accentColor = activeAccentColor,
+                                onMoveApp = { fromIndex, toIndex ->
+                                    if (fromIndex in selectedPackages.indices && toIndex in selectedPackages.indices && fromIndex != toIndex) {
+                                        val mutable = selectedPackages.toMutableList()
+                                        val item = mutable.removeAt(fromIndex)
+                                        mutable.add(toIndex, item)
+                                        selectedPackages = mutable
+                                    }
+                                },
+                                onRemoveApp = { pkg ->
+                                    selectedPackages = selectedPackages - pkg
+                                }
+                            )
+                        }
+                    }
+
                     OutlinedButton(
                         onClick = { showAppPickerSheet = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, themeConfig.accentColor),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = themeConfig.accentColor)
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, activeAccentColor),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = activeAccentColor)
                     ) {
                         Text(
                             text = "+ Добавить приложения",
@@ -339,7 +393,79 @@ fun FolderConfigScreen(
                 }
             }
 
-            // 2. Название и показ заголовка
+            // 2. Системная интеграция и поведение открытой папки
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Системный стиль и меню папки",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 15.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Адаптивный цвет системы (Monet)", color = Color.White, fontSize = 14.sp)
+                            Text("Подстраивать фон и капсулу под обои Android 12+", color = Color.Gray, fontSize = 11.sp)
+                        }
+                        PureSwitch(
+                            checked = useSystemMonet,
+                            onCheckedChange = { useSystemMonet = it }
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Подписи иконок в открытой папке", color = Color.White, fontSize = 14.sp)
+                            Text("Показывать названия под приложениями", color = Color.Gray, fontSize = 11.sp)
+                        }
+                        PureSwitch(
+                            checked = showPopupLabels,
+                            onCheckedChange = { showPopupLabels = it }
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Горизонтальный свайп вкладок", color = Color.White, fontSize = 14.sp)
+                            Text(
+                                if (popupHorizontalSwipe) "Листание влево / вправо" else "Листание вверх / вниз",
+                                color = Color.Gray,
+                                fontSize = 11.sp
+                            )
+                        }
+                        PureSwitch(
+                            checked = popupHorizontalSwipe,
+                            onCheckedChange = { popupHorizontalSwipe = it }
+                        )
+                    }
+                }
+            }
+
+            // 3. Название и показ заголовка
             item {
                 Column(
                     modifier = Modifier
@@ -363,7 +489,7 @@ fun FolderConfigScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Показывать заголовок в папке", color = Color.White, fontSize = 14.sp)
+                        Text("Показывать заголовок на виджете", color = Color.White, fontSize = 14.sp)
                         PureSwitch(
                             checked = showTitle,
                             onCheckedChange = { showTitle = it }
@@ -372,7 +498,7 @@ fun FolderConfigScreen(
                 }
             }
 
-            // 3. Раскладка для большой папки 2x2
+            // 4. Раскладка для большой папки 2x2
             item {
                 Column(
                     modifier = Modifier
@@ -396,7 +522,7 @@ fun FolderConfigScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (isSelected) themeConfig.accentColor.copy(alpha = 0.15f)
+                                    if (isSelected) activeAccentColor.copy(alpha = 0.15f)
                                     else Color.Transparent
                                 )
                                 .clickable { style2x2 = style }
@@ -406,21 +532,21 @@ fun FolderConfigScreen(
                         ) {
                             Text(
                                 text = style.title,
-                                color = if (isSelected) themeConfig.accentColor else Color.White,
+                                color = if (isSelected) activeAccentColor else Color.White,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 14.sp
                             )
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { style2x2 = style },
-                                colors = RadioButtonDefaults.colors(selectedColor = themeConfig.accentColor)
+                                colors = RadioButtonDefaults.colors(selectedColor = activeAccentColor)
                             )
                         }
                     }
                 }
             }
 
-            // 4. Внешний вид: цвет, прозрачность, углы, отступы
+            // 5. Внешний вид: цвет фона, цвет капсулы, прозрачность, кант, углы
             item {
                 Column(
                     modifier = Modifier
@@ -431,36 +557,68 @@ fun FolderConfigScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Оформление и сетка",
+                        "Оформление, цвета и геометрия",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 15.sp
                     )
 
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(colorPresets) { (hex, name) ->
-                            val selected = bgColorHex == hex
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF2B2B2B))
-                                    .border(
-                                        width = if (selected) 1.5.dp else 0.dp,
-                                        color = if (selected) themeConfig.accentColor else Color.Transparent,
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { bgColorHex = hex }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Box(
+                    if (!useSystemMonet) {
+                        Text("Цвет подложки:", fontSize = 12.sp, color = Color.Gray)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(colorPresets) { (hex, name) ->
+                                val selected = bgColorHex == hex
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .size(14.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF000000 or hex.toLong()))
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(name, fontSize = 12.sp, color = Color.White)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF2B2B2B))
+                                        .border(
+                                            width = if (selected) 1.5.dp else 0.dp,
+                                            color = if (selected) activeAccentColor else Color.Transparent,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable { bgColorHex = hex }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF000000 or hex.toLong()))
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(name, fontSize = 12.sp, color = Color.White)
+                                }
+                            }
+                        }
+
+                        Text("Цвет капсулы точек (OxygenOS):", fontSize = 12.sp, color = Color.Gray)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(accentPresets) { (hex, name) ->
+                                val selected = accentColorHex == hex
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF2B2B2B))
+                                        .border(
+                                            width = if (selected) 1.5.dp else 0.dp,
+                                            color = if (selected) Color(0xFF000000 or hex.toLong()) else Color.Transparent,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable { accentColorHex = hex }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF000000 or hex.toLong()))
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(name, fontSize = 12.sp, color = Color.White)
+                                }
                             }
                         }
                     }
@@ -475,8 +633,23 @@ fun FolderConfigScreen(
                         onValueChange = { bgAlpha = it },
                         valueRange = 0f..255f,
                         colors = SliderDefaults.colors(
-                            thumbColor = themeConfig.accentColor,
-                            activeTrackColor = themeConfig.accentColor
+                            thumbColor = activeAccentColor,
+                            activeTrackColor = activeAccentColor
+                        )
+                    )
+
+                    Text(
+                        "Яркость стеклянного канта (рамки): ${(borderAlpha / 255f * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    Slider(
+                        value = borderAlpha,
+                        onValueChange = { borderAlpha = it },
+                        valueRange = 0f..255f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = activeAccentColor,
+                            activeTrackColor = activeAccentColor
                         )
                     )
 
@@ -490,23 +663,23 @@ fun FolderConfigScreen(
                         onValueChange = { cornerRadiusDp = it },
                         valueRange = 8f..44f,
                         colors = SliderDefaults.colors(
-                            thumbColor = themeConfig.accentColor,
-                            activeTrackColor = themeConfig.accentColor
+                            thumbColor = activeAccentColor,
+                            activeTrackColor = activeAccentColor
                         )
                     )
 
                     Text(
-                        "Отступ иконок: ${iconPaddingDp.toInt()} dp",
+                        "Отступ иконок на виджете: ${iconPaddingDp.toInt()} dp",
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
                     Slider(
                         value = iconPaddingDp,
                         onValueChange = { iconPaddingDp = it },
-                        valueRange = 2f..16f,
+                        valueRange = 0f..16f,
                         colors = SliderDefaults.colors(
-                            thumbColor = themeConfig.accentColor,
-                            activeTrackColor = themeConfig.accentColor
+                            thumbColor = activeAccentColor,
+                            activeTrackColor = activeAccentColor
                         )
                     )
                 }
@@ -515,330 +688,6 @@ fun FolderConfigScreen(
     }
 }
 
-/**
- * Макет папки со свайпом по слайдам (HorizontalPager), сортировкой перетаскиванием
- * и плавно перетекающим индикатором точек в стиле OxygenOS
- */
-@OptIn(ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun FolderMockupReorderGrid(
-    selectedApps: List<InstalledAppItem>,
-    itemsPerPage: Int,
-    title: String,
-    showTitle: Boolean,
-    bgColorHex: Int,
-    bgAlpha: Int,
-    cornerRadiusDp: Int,
-    accentColor: Color,
-    onMove: (Int, Int) -> Unit,
-    onRemove: (String) -> Unit,
-    onEmptyClick: () -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-    val currentApps by rememberUpdatedState(selectedApps)
-    val currentOnMove by rememberUpdatedState(onMove)
-
-    val pages = remember(selectedApps, itemsPerPage) {
-        if (selectedApps.isEmpty()) emptyList() else selectedApps.chunked(itemsPerPage)
-    }
-    val pageCount = pages.size.coerceAtLeast(1)
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { pageCount })
-
-    val folderShape = RoundedCornerShape(cornerRadiusDp.dp)
-    val folderBgColor = Color(0xFF000000 or bgColorHex.toLong()).copy(
-        alpha = (bgAlpha / 255f).coerceIn(0.25f, 0.98f)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 210.dp)
-            .clip(folderShape)
-            .background(folderBgColor)
-            .border(1.dp, Color.White.copy(alpha = 0.18f), folderShape)
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (selectedApps.isEmpty()) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onEmptyClick() }
-                    .padding(vertical = 32.dp)
-            ) {
-                Text(
-                    text = "Папка пуста",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Нажмите «+ Добавить приложения» ниже",
-                    color = accentColor,
-                    fontSize = 12.sp
-                )
-            }
-        } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (showTitle && title.isNotBlank()) title else "Слайд ${pagerState.currentPage + 1} из $pageCount",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "Свайп влево/вправо • Зажатие — сорт.",
-                        color = Color.Gray,
-                        fontSize = 10.sp
-                    )
-                }
-
-                androidx.compose.foundation.pager.HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxWidth()
-                ) { pageIdx ->
-                    val slideApps = pages.getOrElse(pageIdx) { emptyList() }
-                    val pageStartGlobalIdx = pageIdx * itemsPerPage
-
-                    var draggingPkg by remember { mutableStateOf<String?>(null) }
-                    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-                    val itemBounds = remember { mutableStateMapOf<String, Pair<Offset, IntSize>>() }
-
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        maxItemsInEachRow = 3
-                    ) {
-                        slideApps.forEachIndexed { localIdx, app ->
-                            val globalIndex = pageStartGlobalIdx + localIdx
-                            key(app.packageName) {
-                                val isDragging = draggingPkg == app.packageName
-                                val scale by animateFloatAsState(
-                                    targetValue = if (isDragging) 1.15f else 1f,
-                                    label = "DragScale"
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .width(80.dp)
-                                        .zIndex(if (isDragging) 10f else 1f)
-                                        .onGloballyPositioned { coords ->
-                                            itemBounds[app.packageName] =
-                                                coords.positionInParent() to coords.size
-                                        }
-                                        .graphicsLayer {
-                                            translationX = if (isDragging) dragOffset.x else 0f
-                                            translationY = if (isDragging) dragOffset.y else 0f
-                                            scaleX = scale
-                                            scaleY = scale
-                                        }
-                                        .pointerInput(app.packageName) {
-                                            detectDragGesturesAfterLongPress(
-                                                onDragStart = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    draggingPkg = app.packageName
-                                                    dragOffset = Offset.Zero
-                                                },
-                                                onDragEnd = {
-                                                    draggingPkg = null
-                                                    dragOffset = Offset.Zero
-                                                },
-                                                onDragCancel = {
-                                                    draggingPkg = null
-                                                    dragOffset = Offset.Zero
-                                                },
-                                                onDrag = { change, dragAmount ->
-                                                    change.consume()
-                                                    dragOffset += dragAmount
-
-                                                    val startInfo = itemBounds[app.packageName]
-                                                        ?: return@detectDragGesturesAfterLongPress
-                                                    val currentCenter = Offset(
-                                                        x = startInfo.first.x + startInfo.second.width / 2f + dragOffset.x,
-                                                        y = startInfo.first.y + startInfo.second.height / 2f + dragOffset.y
-                                                    )
-
-                                                    val targetEntry = itemBounds.entries.firstOrNull { (otherPkg, pair) ->
-                                                        if (otherPkg == app.packageName) return@firstOrNull false
-                                                        val (pos, size) = pair
-                                                        val otherCenter = Offset(
-                                                            x = pos.x + size.width / 2f,
-                                                            y = pos.y + size.height / 2f
-                                                        )
-                                                        hypot(
-                                                            currentCenter.x - otherCenter.x,
-                                                            currentCenter.y - otherCenter.y
-                                                        ) < size.width * 0.48f
-                                                    }
-
-                                                    if (targetEntry != null) {
-                                                        val fromIdx = currentApps.indexOfFirst { it.packageName == app.packageName }
-                                                        val toIdx = currentApps.indexOfFirst { it.packageName == targetEntry.key }
-                                                        if (fromIdx != -1 && toIdx != -1 && fromIdx != toIdx) {
-                                                            val oldPos = startInfo.first
-                                                            val newPos = targetEntry.value.first
-                                                            dragOffset -= (newPos - oldPos)
-                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                            currentOnMove(fromIdx, toIdx)
-                                                        }
-                                                    }
-                                                }
-                                            )
-                                        }
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(
-                                            if (isDragging) accentColor.copy(alpha = 0.25f)
-                                            else Color.White.copy(alpha = 0.07f)
-                                        )
-                                        .border(
-                                            width = if (isDragging) 1.5.dp else 0.dp,
-                                            color = if (isDragging) accentColor else Color.Transparent,
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(modifier = Modifier.size(52.dp)) {
-                                            val bmp = remember(app.packageName) {
-                                                PureFolderWidgetProvider.drawableToBitmap(app.icon, 128).asImageBitmap()
-                                            }
-                                            Image(
-                                                bitmap = bmp,
-                                                contentDescription = app.label,
-                                                modifier = Modifier
-                                                    .size(46.dp)
-                                                    .align(Alignment.Center)
-                                            )
-
-                                            Surface(
-                                                shape = CircleShape,
-                                                color = accentColor,
-                                                modifier = Modifier.align(Alignment.TopStart)
-                                            ) {
-                                                Text(
-                                                    text = "${globalIndex + 1}",
-                                                    color = Color.Black,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 9.sp,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                                )
-                                            }
-
-                                            Surface(
-                                                shape = CircleShape,
-                                                color = Color(0xFFFF5252),
-                                                modifier = Modifier
-                                                    .size(18.dp)
-                                                    .align(Alignment.TopEnd)
-                                                    .clickable { onRemove(app.packageName) }
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Text(
-                                                        text = "✕",
-                                                        color = Color.White,
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Text(
-                                            text = app.label,
-                                            color = Color.White,
-                                            fontSize = 10.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Плавный индикатор точек OxygenOS (одна точка перетекает во вторую при свайпе)
-                if (pageCount > 1) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OxygenMorphingDots(
-                        pagerState = pagerState,
-                        pageCount = pageCount,
-                        activeColor = accentColor
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Индикатор в стиле OxygenOS: при свайпе активная капсула плавно растягивается
- * и перетекает из одной точки в следующую на основе currentPageOffsetFraction
- */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun OxygenMorphingDots(
-    pagerState: androidx.compose.foundation.pager.PagerState,
-    pageCount: Int,
-    activeColor: Color
-) {
-    val currentPage = pagerState.currentPage
-    val offsetFraction = pagerState.currentPageOffsetFraction
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.height(10.dp)
-    ) {
-        for (i in 0 until pageCount) {
-            // Вычисляем степень активности каждой точки с учетом дробного сдвига свайпа
-            val distance = kotlin.math.abs((currentPage + offsetFraction) - i).coerceIn(0f, 1f)
-            val activeFraction = 1f - distance
-
-            // Ширина плавно перетекает от 7.dp (обычная точка) до 22.dp (активная капсула)
-            val widthDp = 7.dp + (15.dp * activeFraction)
-            val dotColor = androidx.compose.ui.graphics.lerp(
-                Color.White.copy(alpha = 0.3f),
-                activeColor,
-                activeFraction
-            )
-
-            Box(
-                modifier = Modifier
-                    .width(widthDp)
-                    .height(7.dp)
-                    .clip(CircleShape)
-                    .background(dotColor)
-            )
-        }
-    }
-}
-
-/**
- * Модальное окно выбора приложений:
- * - Центрированная сетка на 5 столбцов (или 3..5 по ширине экрана)
- * - Сортировка строго от А-Я до A-Z
- * - Выбранное приложение остаётся на своём месте и обводится рамкой
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppPickerBottomSheet(
@@ -851,7 +700,6 @@ private fun AppPickerBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
 
-    // Фильтрация без изменения позиции выбранных элементов!
     val displayedApps = remember(allApps, searchQuery) {
         if (searchQuery.isBlank()) {
             allApps
@@ -917,7 +765,6 @@ private fun AppPickerBottomSheet(
                     .weight(1f),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // По умолчанию стремимся к 5 столбцам (на узких экранах минимум 3)
                 val columnsCount = (maxWidth / 68.dp).toInt().coerceIn(3, 5)
 
                 LazyVerticalGrid(
@@ -987,8 +834,6 @@ private fun AppPickerBottomSheet(
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-
                         }
                     }
                 }

@@ -73,7 +73,16 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val widthPx = dpToPx(context, minWidth.coerceAtLeast(60))
             val heightPx = dpToPx(context, actualHeightDp.coerceAtLeast(60))
             val radiusPx = dpToPx(context, config.cornerRadiusDp).toFloat()
-            val bgBitmap = createRoundedBgBitmap(widthPx, heightPx, radiusPx, config.bgColorHex, config.bgAlpha)
+            val resolvedBgHex = FolderWidgetPrefs.resolveBgColorHex(context, config)
+            val resolvedAccentHex = FolderWidgetPrefs.resolveAccentColorHex(context, config)
+            val bgBitmap = createRoundedBgBitmap(
+                w = widthPx,
+                h = heightPx,
+                radius = radiusPx,
+                colorHex = resolvedBgHex,
+                alpha = config.bgAlpha,
+                borderAlpha = config.borderAlpha
+            )
             rootViews.setImageViewBitmap(R.id.folder_bg_image, bgBitmap)
 
             // 2. PendingIntent для открытия всплывающей папки
@@ -203,7 +212,8 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
                 val dotsBmp = createOxygenDotsBitmap(
                     totalPages = totalPages,
                     activeIndex = safePage,
-                    compactMode = (cols == 1)
+                    compactMode = (cols == 1),
+                    accentColorHex = resolvedAccentHex
                 )
                 rootViews.setImageViewBitmap(R.id.slide_dots_indicator, dotsBmp)
 
@@ -336,7 +346,8 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
         private fun createOxygenDotsBitmap(
             totalPages: Int,
             activeIndex: Int,
-            compactMode: Boolean = false
+            compactMode: Boolean = false,
+            accentColorHex: Int = 0x00E676
         ): Bitmap {
             val visibleDots = if (compactMode) totalPages.coerceAtMost(3) else totalPages.coerceAtMost(7)
             val safeActive = activeIndex % visibleDots
@@ -351,7 +362,7 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val canvas = Canvas(bmp)
 
             val activePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.parseColor("#00E676")
+                color = (0xFF shl 24) or (accentColorHex and 0xFFFFFF)
                 style = Paint.Style.FILL
             }
             val inactivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -401,7 +412,14 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             return bmp
         }
 
-        private fun createRoundedBgBitmap(w: Int, h: Int, radius: Float, colorHex: Int, alpha: Int): Bitmap {
+        private fun createRoundedBgBitmap(
+            w: Int,
+            h: Int,
+            radius: Float,
+            colorHex: Int,
+            alpha: Int,
+            borderAlpha: Int = 90
+        ): Bitmap {
             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -411,13 +429,15 @@ class PureFolderWidgetProvider : AppWidgetProvider() {
             val rect = RectF(0f, 0f, w.toFloat(), h.toFloat())
             canvas.drawRoundRect(rect, radius, radius, paint)
 
-            val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb((alpha * 0.35f).toInt().coerceIn(0, 255), 255, 255, 255)
-                style = Paint.Style.STROKE
-                strokeWidth = 2.5f
+            if (borderAlpha > 0) {
+                val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.argb(borderAlpha.coerceIn(0, 255), 255, 255, 255)
+                    style = Paint.Style.STROKE
+                    strokeWidth = 2.5f
+                }
+                rect.inset(1.5f, 1.5f)
+                canvas.drawRoundRect(rect, radius, radius, strokePaint)
             }
-            rect.inset(1.5f, 1.5f)
-            canvas.drawRoundRect(rect, radius, radius, strokePaint)
             return bmp
         }
 
